@@ -42,7 +42,7 @@ function Login() {
       }}
     >
       <div className="bg-white p-12 rounded-lg w-4/6 max-w-4xl flex flex-col items-center">
-        <h1 className="text-4xl font-bold text-gray-800 mb-4 font-serif">
+        <h1 className="text-4xl font-bold text-gray-800 mb-4 font-serif text-center">
           Welcome back! Sign in to manage your link page.
         </h1>
         <form onSubmit={handleSubmit} className="w-full max-w-sm mx-auto mt-8">

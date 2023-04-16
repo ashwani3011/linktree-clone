@@ -94,16 +94,20 @@ export default function Home() {
     <div className="flex justify-center items-center">
       {isAuthenticated && userId ? (
         <div className="flex flex-col gap-4">
-          <div className="bg-gradient-to-r from-yellow-200 via-green-200 to-green-300 border-2 border-black p-4 rounded relative">
-            {username && profilePicture && (
+          {username ? (
+            <div className="bg-gradient-to-r from-yellow-200 via-green-200 to-green-300 border-2 border-black p-4 rounded relative">
               <div className="flex flex-col justify-center items-center gap-2">
                 <Image
-                  src={profilePicture}
+                  src={
+                    profilePicture ||
+                    "https://cdn.pixabay.com/photo/2017/02/23/13/05/avatar-2092113_960_720.png"
+                  }
                   alt="profile-picture"
                   width={100}
                   height={100}
                   className="rounded-full"
                 />
+
                 <ProfilePicture user_id={userId} />
                 <h1 className="text-2xl font-bold pb-4">Hello 👋 {username}</h1>
                 <div className="bg-gray-200 rounded font-semibold pl-1">
@@ -117,34 +121,21 @@ export default function Home() {
                   </button>
                 </div>
               </div>
-            )}
-            <button
-              onClick={signout}
-              className="bg-orange-500 hover:bg-orange-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline absolute top-0 right-0"
-            >
-              Sign Out
-            </button>
-          </div>
 
+              <button
+                onClick={signout}
+                className="bg-orange-500 hover:bg-orange-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline absolute top-0 right-0"
+              >
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <h1>Loading...</h1>
+          )}
           <AddNewLink addNewLink={handleAddNewLink} />
           <RenderLinks links={links} />
         </div>
       ) : (
-        // <div className="flex justify-center items-center h-screen">
-        //   <div className="flex gap-8">
-        //     <Link href="/login">
-        //       <span className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-        //         Login
-        //       </span>
-        //     </Link>
-        //     <Link href="/signup">
-        //       <span className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-        //         Sign up
-        //       </span>
-        //     </Link>
-        //   </div>
-        // </div>
-
         <div
           className="flex flex-col items-center justify-center min-h-screen w-full"
           style={{
@@ -152,7 +143,7 @@ export default function Home() {
           }}
         >
           <div className="bg-white p-12 rounded-lg w-4/6 max-w-4xl flex flex-col items-center">
-            <h1 className="text-6xl font-bold text-gray-800 mb-8 font-serif">
+            <h1 className="text-6xl font-bold text-gray-800 mb-8 font-serif text-center">
               Welcome to MyLinkTree
             </h1>
             <div className="flex space-x-4">

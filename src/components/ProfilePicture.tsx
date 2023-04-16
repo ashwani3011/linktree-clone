@@ -30,6 +30,9 @@ function ProfilePicture({ user_id }: { user_id: string }) {
             .from("users")
             .update({ profile_picture_url: profilePicturePublicUrl })
             .eq("id", user_id);
+
+          console.log("log11233");
+          window.location.reload();
         }
       }
     } catch (error) {
