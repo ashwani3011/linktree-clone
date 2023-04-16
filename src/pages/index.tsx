@@ -1,124 +1,180 @@
-import Image from 'next/image'
-import { Inter } from 'next/font/google'
+import AddNewLink from "@/components/AddNewLink";
+import supabase from "@/utils/supabaseClient";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import RenderLinks from "@/components/RenderLinks";
+import ProfilePicture from "@/components/ProfilePicture";
+import { useRouter } from "next/router";
+import Image from "next/image";
 
-const inter = Inter({ subsets: ['latin'] })
+export type Link = {
+  title: string;
+  url: string;
+  id: string;
+};
 
 export default function Home() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [userId, setUserId] = useState<string | undefined>();
+  const [username, setUsername] = useState<string | undefined>();
+  const [profilePicture, setProfilePicture] = useState<string | undefined>();
+  const [links, setLinks] = useState<Link[]>([]);
+  const [isCopied, setIsCopied] = useState<boolean>(false);
+
+  const profileUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/users/${userId}`;
+
+  function handleCopyLink() {
+    navigator.clipboard.writeText(profileUrl);
+    setIsCopied(true);
+    setTimeout(() => {
+      setIsCopied(false);
+    }, 2000);
+  }
+
+  async function handleAddNewLink(newLink: Link) {
+    const { data, error } = await supabase
+      .from("links")
+      .insert({
+        title: newLink.title,
+        url: newLink.url,
+        user_id: userId,
+      })
+      .select();
+    setLinks([...links, newLink]);
+  }
+
+  useEffect(() => {
+    const getUser = async () => {
+      const user = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.data.user?.id);
+        setIsAuthenticated(true);
+      }
+    };
+    getUser();
+  }, []);
+
+  useEffect(() => {
+    (async function () {
+      const { data } = await supabase
+        .from("users")
+        .select("name, profile_picture_url")
+        .eq("id", userId);
+      if (data) {
+        setUsername(data[0]["name"]);
+        setProfilePicture(data[0]["profile_picture_url"]);
+      }
+    })();
+  }, [userId, profilePicture, username]);
+
+  useEffect(() => {
+    try {
+      const getLinks = async () => {
+        const { data, error } = await supabase
+          .from("links")
+          .select("title, url, id")
+          .eq("user_id", userId);
+        if (error) throw error;
+
+        setLinks(data);
+      };
+      getLinks();
+    } catch (error) {
+      console.log(error);
+    }
+  }, [userId]);
+
+  async function signout() {
+    await supabase.auth.signOut();
+    setUserId(undefined);
+    setIsAuthenticated(false);
+  }
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/pages/index.tsx</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <div className="flex justify-center items-center">
+      {isAuthenticated && userId ? (
+        <div className="flex flex-col gap-4">
+          <div className="bg-gradient-to-r from-yellow-200 via-green-200 to-green-300 border-2 border-black p-4 rounded relative">
+            {username && profilePicture && (
+              <div className="flex flex-col justify-center items-center gap-2">
+                <Image
+                  src={profilePicture}
+                  alt="profile-picture"
+                  width={100}
+                  height={100}
+                  className="rounded-full"
+                />
+                <ProfilePicture user_id={userId} />
+                <h1 className="text-2xl font-bold pb-4">Hello 👋 {username}</h1>
+                <div className="bg-gray-200 rounded font-semibold pl-1">
+                  Profile URL:{" "}
+                  <a href={profileUrl}>{profileUrl.substring(0, 20)}...</a>
+                  <button
+                    onClick={handleCopyLink}
+                    className="bg-orange-500 hover:bg-orange-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
+                  >
+                    {isCopied ? "Copied!" : "Copy Link"}
+                  </button>
+                </div>
+              </div>
+            )}
+            <button
+              onClick={signout}
+              className="bg-orange-500 hover:bg-orange-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline absolute top-0 right-0"
+            >
+              Sign Out
+            </button>
+          </div>
+
+          <AddNewLink addNewLink={handleAddNewLink} />
+          <RenderLinks links={links} />
         </div>
-      </div>
+      ) : (
+        // <div className="flex justify-center items-center h-screen">
+        //   <div className="flex gap-8">
+        //     <Link href="/login">
+        //       <span className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+        //         Login
+        //       </span>
+        //     </Link>
+        //     <Link href="/signup">
+        //       <span className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+        //         Sign up
+        //       </span>
+        //     </Link>
+        //   </div>
+        // </div>
 
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700/10 after:dark:from-sky-900 after:dark:via-[#0141ff]/40 before:lg:h-[360px]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
+        <div
+          className="flex flex-col items-center justify-center min-h-screen w-full"
+          style={{
+            background: "linear-gradient(135deg, #E0EAFC 0%, #CFDEF3 100%)",
+          }}
         >
-          <h2 className={`${inter.className} mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p
-            className={`${inter.className} m-0 max-w-[30ch] text-sm opacity-50`}
-          >
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`${inter.className} mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p
-            className={`${inter.className} m-0 max-w-[30ch] text-sm opacity-50`}
-          >
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`${inter.className} mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p
-            className={`${inter.className} m-0 max-w-[30ch] text-sm opacity-50`}
-          >
-            Discover and deploy boilerplate example Next.js&nbsp;projects.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`${inter.className} mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p
-            className={`${inter.className} m-0 max-w-[30ch] text-sm opacity-50`}
-          >
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+          <div className="bg-white p-12 rounded-lg w-4/6 max-w-4xl flex flex-col items-center">
+            <h1 className="text-6xl font-bold text-gray-800 mb-8 font-serif">
+              Welcome to MyLinkTree
+            </h1>
+            <div className="flex space-x-4">
+              <Link href="/login">
+                <span className="px-6 py-3 bg-gray-800 text-white rounded-full hover:bg-gray-700 font-bold">
+                  Login
+                </span>
+              </Link>
+              <Link href="/signup">
+                <span className="px-6 py-3 bg-transparent border-2 border-gray-800 text-gray-800 rounded-full hover:bg-gray-200 font-bold">
+                  Signup
+                </span>
+              </Link>
+            </div>
+            <p className="text-gray-800 mt-8 text-center max-w-md">
+              MyLinkTree is a platform that allows you to create a personalized
+              link page to showcase your social media profiles, portfolio, or
+              any other online presence you have. Sign up now to get started!
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
