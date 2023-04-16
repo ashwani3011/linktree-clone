@@ -2,41 +2,33 @@ import supabase from "@/utils/supabaseClient";
 import Image from "next/image";
 import { useState } from "react";
 
-export async function getStaticPaths() {
-  const { data, error } = await supabase.from("users").select();
-  const paths = data!.map((user) => ({
-    params: {
-      slug: user.id,
-    },
-  }));
+export async function getServerSideProps({ params: { slug } }: any) {
+  try {
+    const { data: user, error } = await supabase
+      .from("users")
+      .select("name, id, profile_picture_url")
+      .eq("id", slug);
 
-  return {
-    paths,
-    fallback: false,
-  };
-}
+    if (error) throw error;
 
-export async function getStaticProps({ params: { slug } }: any) {
-  const { data: user, error } = await supabase
-    .from("users")
-    .select("name, id, profile_picture_url")
-    .eq("id", slug);
+    const { data: links, error: linksError } = await supabase
+      .from("links")
+      .select("title, url")
+      .eq("user_id", user[0].id);
 
-  if (error) throw error;
+    if (linksError) throw linksError;
 
-  const { data: links } = await supabase
-    .from("links")
-    .select("title, url")
-    .eq("user_id", user[0].id);
-
-  return {
-    props: {
-      name: user[0].name,
-      image: user[0].profile_picture_url,
-      links,
-      userId: user[0].id,
-    },
-  };
+    return {
+      props: {
+        name: user[0].name,
+        image: user[0].profile_picture_url,
+        links,
+        userId: user[0].id,
+      },
+    };
+  } catch (error) {
+    console.log(error);
+  }
 }
 
 function UserProfile({
